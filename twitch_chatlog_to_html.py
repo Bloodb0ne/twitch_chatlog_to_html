@@ -10,6 +10,11 @@ import argparse
 import functools
 import re
 import os
+from string import Template
+
+scriptLocation = os.path.dirname(os.path.realpath(__file__))
+databasePath =  os.path.join(scriptLocation,"cached_data.db")
+templatePath = os.path.join(scriptLocation,"template.html")
 
 colors = ['#FF0000',
 '#0000FF',
@@ -59,8 +64,8 @@ def messageContainer(username,content,user_color):
 
 def intoTemplate(filename,content):
 	with codecs.open(filename, encoding='utf-8') as f:
-		htmlSite = f.read()
-		return htmlSite.replace("{0}", content)
+		templ = Template(f.read())
+		return templ.substitute(content=content)
 
 def findEmote(word,full = True):
 	if isinstance(word,re.Match): 
@@ -70,7 +75,7 @@ def findEmote(word,full = True):
 	if( len(emoteCode) < 3): return emoteCode
 
 	if not emoteCache.get(emoteCode,False):
-		conn = sqlite3.connect('cached_data.db')
+		conn = sqlite3.connect(databasePath)
 		c = conn.cursor()
 		if not full:
 			query = '''SELECT emote_id,"BTTV","" FROM bttv_emotes WHERE code = '{0}' UNION
@@ -90,7 +95,6 @@ def findEmote(word,full = True):
 	else:
 		cached = emoteCache[emoteCode]
 		if isinstance(cached,str):
-			#print('Caching a string',word)
 			return cached
 		else:
 			return emoteContainer(getEmoteUrl(cached[0],cached[1],cached[2]))
@@ -109,7 +113,7 @@ def parseRawLog(log_name,out_file):
 		for line in f:
 			if line[0] == '#': continue
 			matches = re.search(r"^(\[[\d:]*\])?\s*([\w\s]*):(.*)$",line)
-			#print(matches)
+
 			if matches is None: continue
 
 			if len(matches.groups()) == 3:
@@ -123,13 +127,13 @@ def parseRawLog(log_name,out_file):
 			fullEmoteLog += messageContainer(username,content,getUserColor(username))
 	#Output
 	with codecs.open(out_file,mode='w+',encoding='utf-8') as f:
-		f.write(intoTemplate('template.html',fullEmoteLog))
+		f.write(intoTemplate(templatePath,fullEmoteLog))
 
 def parseTwitchLog(log_name,out_file):
 	fullEmoteLog = ""
 	with codecs.open(log_name, encoding='utf-8') as f:
 		comments = json.loads(f.read())
-
+		print('[TwitchLog] Parsing %d comments' % len(comments))
 		for cmt in comments:
 			username = cmt['commenter']['display_name']
 			content = cmt['message']['body']
@@ -149,16 +153,16 @@ def parseTwitchLog(log_name,out_file):
 
 	#Output
 	with codecs.open(out_file,mode='w+',encoding='utf-8') as f:
-		f.write(intoTemplate('template.html',fullEmoteLog))
+		f.write(intoTemplate(templatePath,fullEmoteLog))
 
 def addUserDB(username,uid):
-	conn = sqlite3.connect('cached_data.db')
+	conn = sqlite3.connect(databasePath)
 	c = conn.cursor()
 	c.execute("INSERT OR REPLACE INTO users(id,username) VALUES ({0},'{1}')".format(uid,username))
 	conn.commit()
 
 def addFFZEmotes(uid,emotes):
-	conn = sqlite3.connect('cached_data.db')
+	conn = sqlite3.connect(databasePath)
 	c = conn.cursor()
 	for emote in emotes:
 		c.execute("INSERT OR REPLACE INTO ffz_emotes(uid,emote_id,code,url,url2,url3) VALUES ({0},{1},'{2}','{3}','{4}','{5}')"
@@ -166,7 +170,7 @@ def addFFZEmotes(uid,emotes):
 	conn.commit()
 
 def addBTTVEmotes(uid,emotes):
-	conn = sqlite3.connect('cached_data.db')
+	conn = sqlite3.connect(databasePath)
 	c = conn.cursor()
 	for emote in emotes:
 			c.execute("INSERT OR REPLACE INTO bttv_emotes(uid,emote_id,code,type) VALUES ({0},'{1}','{2}','{3}')"
@@ -206,14 +210,14 @@ def getFFZGlobalEmotes():
 	addFFZEmotes(0,emotes)
 
 def getChannelID(ch_name):
-	conn = sqlite3.connect('cached_data.db')
+	conn = sqlite3.connect(databasePath)
 	c = conn.cursor()
 	res = c.execute("SELECT id FROM users WHERE username = '{0}' LIMIT 1".format(ch_name))
 	return int(res.fetchone()[0])
 
 
 def updateTwitchEmotes(json_input):
-	conn = sqlite3.connect("cached_data.db")
+	conn = sqlite3.connect(databasePath)
 	c = conn.cursor()
 	with open(json_input) as f:
 		data = f.read()
@@ -280,8 +284,24 @@ parser.add_argument('--input', dest='input_file',default="",
 parser.add_argument('--output', dest='output_file',default="",
                    help='HTML file thats generated')
 
+parser.add_argument('--database', dest='database_location',default=databasePath,
+                   help='Sqlite3 database for emote cache (defaults to cached_data.db in script path)')
+
+parser.add_argument('--template', dest='template_location',default=templatePath,
+                   help='Location for the template (defaults to template.html in script path)')
 
 args = parser.parse_args()
+
+
+if args.database_location and os.path.isfile(args.database_location):
+	databasePath = args.database_location
+else:
+	print('Invalid database file. Reverting to default');
+
+if args.template_location and os.path.isfile(args.template_location):
+	templatePath = args.template_location
+else:
+	print('Invalid template file. Reverting to default');
 
 if args.vod_id:
 	if args.client_id:
@@ -302,11 +322,13 @@ if args.input_file:
 		if not args.output_file:
 			print('No Output destination selected')
 		else:
-			if os.path.splitext(args.input_file)[1] == 'json':
+			print('Generating output...')
+
+			if os.path.splitext(args.input_file)[1] == '.json':
 				parseTwitchLog(args.input_file,args.output_file)
 			else:
 				parseRawLog(args.input_file,args.output_file)
-			print('Generating output...')
+			
 		exit()
 	exit()
 
