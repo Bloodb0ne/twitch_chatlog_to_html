@@ -10,6 +10,7 @@ import argparse
 import functools
 import re
 import os
+import html
 from string import Template
 
 scriptLocation = os.path.dirname(os.path.realpath(__file__))
@@ -72,6 +73,9 @@ def findEmote(word,full = True):
 		emoteCode = word.group(0)
 	else:
 		emoteCode = word
+
+	emoteCode = html.escape(emoteCode)
+	
 	if( len(emoteCode) < 3): return emoteCode
 
 	if not emoteCache.get(emoteCode,False):
@@ -147,7 +151,7 @@ def parseTwitchLog(log_name,out_file):
 			toEmoteCache(emotes)
 
 			partialFindEmote = functools.partial(findEmote,full = False)
-			content = re.sub(r"[a-zA-Z0-9]{1,20}",partialFindEmote,content)
+			content = re.sub(r"[\d\w\S]{1,20}",partialFindEmote,content)
 			
 			fullEmoteLog += messageContainer(username,content,user_color)
 
