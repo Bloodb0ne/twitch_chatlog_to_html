@@ -221,7 +221,7 @@ def updateTwitchEmotes(json_input):
 		for emote in emotes['emoticons']:
 			if emote['emoticon_set'] == 0: continue
 			prefix = re.match(r"([a-z0-9]*)(.*)",emote['code']).group(1);
-			c.execute("INSERT OR IGRNORE INTO twitch_emotes VALUES ({0},'{1}','{2}',{3})".format(emote['id'],prefix,emote['code'],emote['emoticon_set']))
+			c.execute("INSERT OR IGNORE INTO twitch_emotes VALUES ({0},'{1}','{2}',{3})".format(emote['id'],prefix,emote['code'],emote['emoticon_set']))
 		conn.commit()
 
 def downloadVODLog(vod_id,client_id,log_file):
