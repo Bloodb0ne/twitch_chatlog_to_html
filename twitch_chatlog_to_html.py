@@ -59,7 +59,8 @@ def messageContainer(username,content,user_color):
 
 def intoTemplate(filename,content):
 	with codecs.open(filename, encoding='utf-8') as f:
-		return f.read().format(content);
+		htmlSite = f.read()
+		return htmlSize.replace("{0}", content)
 
 def findEmote(word,full = True):
 	if isinstance(word,re.Match): 
