@@ -240,8 +240,9 @@ def downloadVODLog(vod_id,client_id,log_file):
 	with open(log_file,'w+') as f:
 		json.dump(comments,f)
 
-def downloadTwitchEmotes(output):
-	urllib.request.urlretrieve("https://api.twitch.tv/kraken/chat/emoticon_images",output)
+def downloadTwitchEmotes(client_id,output):
+	params = urllib.parse.urlencode({'client_id':client_id})
+	urllib.request.urlretrieve("https://api.twitch.tv/v5/chat/emoticon_images?%s"%params,output)
 	
 
 def fetchExternalEmotes(ch_name):
@@ -310,10 +311,13 @@ if args.input_file:
 	exit()
 
 if args.twitch_emotes:
-	print("[Slow]Downloading ALL twitch emotes (big download)")
-	downloadTwitchEmotes("all_twitch_emotes_by_set.json")
-	print("[Slow] Adding Twitch emotes to the database cache...")
-	updateTwitchEmotes("all_twitch_emotes_by_set.json")
+	if args.client_id:
+		print("[Slow]Downloading ALL twitch emotes (big download)")
+		downloadTwitchEmotes(args.client_id,"all_twitch_emotes_by_set.json")
+		print("[Slow] Adding Twitch emotes to the database cache...")
+		updateTwitchEmotes("all_twitch_emotes_by_set.json")
+	else:
+		print('Client ID is required')
 	exit()
 
 if args.update_emotes:
