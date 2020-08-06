@@ -38,7 +38,8 @@ unameColors = {}
 
 def getUserColor(username):
 	if not unameColors.get(username,False):
-		return colors[random.randint(0,len(colors)-1)]
+		color = colors[random.randint(0,len(colors)-1)]
+		unameColors[username] = color
 	else:
 		return unameColors[username]
 
@@ -115,10 +116,14 @@ def parseRawLog(log_name,out_file):
 	fullEmoteLog = ""
 	with codecs.open(log_name, encoding='utf-8') as f:
 		for line in f:
+			print(line)
 			if line[0] == '#': continue
-			matches = re.search(r"^(\[[\d:]*\])?\s*([\w\s]*):(.*)$",line)
+			matches = re.search(r"^(\[[\d-:\s]*\])?(\s*#\w*)?\s*([\w\s]*):(.*)$",line)
 
 			if matches is None: continue
+			if len(matches.groups()) == 4:
+				username = matches.group(3)
+				content = matches.group(4)
 
 			if len(matches.groups()) == 3:
 				username = matches.group(2)

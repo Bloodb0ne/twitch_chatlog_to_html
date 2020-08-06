@@ -1,4 +1,10 @@
+# **DEPRECATED**
+
+This project is replaced with a new more flexible concept that can be found 
+[here](https://github.com/Bloodb0ne/twitch_log_renderer)
+
 # Twitch Chatlogs to HTML
+
 Renders twitch chat to an html document, based on the template
 
 When using logs from Twitch chat replay you dont need to download all twitch emotes,
